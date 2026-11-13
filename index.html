@@ -69,10 +69,15 @@
 
     <div class="status" id="status">Łączenie z bazą...</div>
 </div>
-
+<script>
+    window.onerror = function(msg, url, line) {
+        document.getElementById("status").textContent = "Błąd kodu (linia " + line + "): " + msg;
+        document.getElementById("status").style.color = "red";
+    };
+</script>
 <script type="module">
-import { initializeApp } from "https://gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { initializeApp } from "www.://gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "www.://gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBOcajZAOO1BuAZZeJIFF_ncOg6eQyfKNM",
