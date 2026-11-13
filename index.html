@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nasza Lista</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f3f4f6; color: #1f2937; padding-bottom: 60px; }
+        header { background-color: #2563eb; color: white; padding: 16px; text-align: center; font-size: 1.25rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+        .container { max-width: 800px; margin: 0 auto; padding: 12px; }
+        
+     
+        .input-section { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 1rem; outline: none; margin-bottom: 10px; }
+        input[type="text"]:focus { border-color: #2563eb; }
+        .btn-group { display: flex; gap: 8px; }
+        .add-btn { flex: 1; color: white; border: none; border-radius: 10px; padding: 12px 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.15s; }
+        .btn-important { background-color: #dc2626; }
+        .btn-important:active { background-color: #b91c1c; }
+        .btn-normal { background-color: #2563eb; }
+        .btn-normal:active { background-color: #1d4ed8; }
+
+   
+        .columns-wrapper { display: flex; gap: 8px; align-items: flex-start; }
+        .column { flex: 1; background: white; border-radius: 12px; padding: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); min-height: 250px; width: 50%; }
+        .col-header { text-align: center; font-weight: bold; padding: 8px 4px; border-radius: 8px; margin-bottom: 8px; font-size: 0.95rem; }
+        .col-important .col-header { background-color: #fee2e2; color: #991b1b; }
+        .col-normal .col-header { background-color: #dbeafe; color: #1e40af; }
+
+        ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        li { background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px 8px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 6px; transition: 0.2s; }
+        li.done { opacity: 0.55; background-color: #e5e7eb; }
+        li.done span { text-decoration: line-through; color: #6b7280; }
+        
+        .item-text { flex: 1; font-size: 0.95rem; cursor: pointer; word-break: break-word; line-height: 1.3; }
+        .delete-btn { background: #ef4444; color: white; border: none; border-radius: 6px; width: 26px; height: 26px; font-size: 0.8rem; font-weight: bold; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .status { text-align: center; font-size: 0.8rem; color: #6b7280; margin-top: 16px; }
+    </style>
+</head>
+<body>
+
+<header>Lista Domowa Do Zakupów</header>
+
+<div class="container">
+    <div class="input-section">
+        <input type="text" id="itemInput" placeholder="Wpisz rzecz do dodania..." autocomplete="off">
+        <div class="btn-group">
+            <button class="add-btn btn-important" id="addImportantBtn">Dodaj ważne rzeczy</button>
+            <button class="add-btn btn-normal" id="addNormalBtn">Dodaj mniej ważne </button>
+        </div>
+    </div>
+
+    <div class="columns-wrapper">
+        <!-- Lewa kolumna: Ważne -->
+        <div class="column col-important">
+            <div class="col-header"> Ważne</div>
+            <ul id="importantList"></ul>
+        </div>
+<!-- prawa kolumna: mniej Ważne -->
+        <div class="column col-normal">
+            <div class="col-header"> Mniej ważne</div>
+            <ul id="normalList"></ul>
+        </div>
+    </div>
+
+    <div class="status" id="status">Łączenie z bazą...</div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://gstatic.com";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://gstatic.com";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBOcajZAOO1BuAZZeJIFF_ncOg6eQyfKNM",
+  authDomain: "pppa-4351a.firebaseapp.com",
+  databaseURL: "https://pppa-4351a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "pppa-4351a",
+  storageBucket: "pppa-4351a.firebasestorage.app",
+  messagingSenderId: "980497640586",
+  appId: "1:980497640586:web:bdb44f9fef3de3138d9173",
+  measurementId: "G-3DEQCMVS4Y"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const listCol = collection(db, "wspolna_lista");
+
+    const itemInput = document.getElementById("itemInput");
+    const addImportantBtn = document.getElementById("addImportantBtn");
+    const addNormalBtn = document.getElementById("addNormalBtn");
+    const importantListEl = document.getElementById("importantList");
+    const normalListEl = document.getElementById("normalList");
+    const statusEl = document.getElementById("status");
+
+    async function addItem(isImportant) {
+        const text = itemInput.value.trim();
+        if (!text) return;
+        itemInput.value = "";
+        await addDoc(listCol, {
+            text: text,
+            important: isImportant,
+            done: false,
+            createdAt: serverTimestamp()
+        });
+    }
+
+    addImportantBtn.addEventListener("click", () => addItem(true));
+    addNormalBtn.addEventListener("click", () => addItem(false));
+    
+    itemInput.addEventListener("keypress", (e) => { 
+        if (e.key === "Enter") addItem(false); 
+    });
+
+    const q = query(listCol, orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+        statusEl.textContent = "Zsynchronizowano na żywo ✅";
+        importantListEl.innerHTML = "";
+        normalListEl.innerHTML = "";
+
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const li = document.createElement("li");
+            if (data.done) li.classList.add("done");
+
+            const span = document.createElement("span");
+            span.className = "item-text";
+            span.textContent = data.text;
+            span.onclick = () => updateDoc(doc(db, "wspolna_lista", docSnap.id), { done: !data.done });
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "delete-btn";
+            delBtn.textContent = "✕";
+            delBtn.onclick = () => deleteDoc(doc(db, "wspolna_lista", docSnap.id));
+
+            li.appendChild(span);
+            li.appendChild(delBtn);
+
+            if (data.important) {
+                importantListEl.appendChild(li);
+            } else {
+                normalListEl.appendChild(li);
+            }
+        });
+    }, (error) => {
+        statusEl.textContent = "Błąd połączenia. Sprawdź konfigurację Firebase.";
+        console.error(error);
+    });
+</script>
+
+</body>
+</html>
