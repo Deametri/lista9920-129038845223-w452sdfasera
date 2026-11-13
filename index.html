@@ -70,10 +70,10 @@
     <div class="status" id="status">Łączenie z bazą...</div>
 </div>
 <script>
-    window.onerror = function(msg, url, line) {
-        document.getElementById("status").textContent = "Błąd kodu (linia " + line + "): " + msg;
+    window.addEventListener("unhandledrejection", function(event) {
+        document.getElementById("status").textContent = "Błąd: " + event.reason;
         document.getElementById("status").style.color = "red";
-    };
+    });
 </script>
 <script type="module">
 import { initializeApp } from "www.://gstatic.com/firebasejs/10.8.0/firebase-app.js";
